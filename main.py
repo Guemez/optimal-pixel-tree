@@ -101,10 +101,10 @@ def createRandomLifeform():
     t = numpy.random.randint(low=4, high=8)
     r = numpy.random.randint(low=0, high=16-t)
     for i in range(r, r+t):
-        tree[31, i] = trunk 
+        tree[31, i] = trunk
 
-    for x in range(30, 1, -1):
-        for y in range(1, 14):
+    for x in range(30, -1, -1):
+        for y in range(0, 15):
             w = 0
             t = 0
             b = 0
@@ -134,7 +134,7 @@ def createRandomLifeform():
             if tree[x+1, y+1][0] == white[0]:
                 w+=1
             p = choose(w,t,b,l)
-            print(p)
+            #print(p)
             tree[x, y] = choosePixel(numpy.random.choice(possibilities, 1, 1, p))
 
     
@@ -159,7 +159,8 @@ for row in data:
             energyConsumed = energyConsumed + 0.1
 
 score = ((energyProduced - energyConsumed) ** 2) + ((nutrientsStored - nutrientsConsumed) ** 2)
-print(score)
+#print(score)
+print(data)
 
 image = Image.fromarray(data)
 image.show()
