@@ -1,6 +1,7 @@
 import numpy
 from PIL import Image
-from random import randint
+import random
+#from random import randint
 
 """
 A pixel tree must comply with the following characteristics:
@@ -15,17 +16,35 @@ The bottom eight pixels only can be tree trunk pixels or white spaces.
 
 """
 
-tracker = numpy.zeros((32, 16, 1), dtype=numpy.uint8)
 possibilities = ["white", "trunk", "branch", "leaf"]
-
 trunk = [103, 62, 20]
 branch = [133, 88, 35]
 leaf = [78, 105, 26]
 white = [255, 255, 255]
-energyProduced = 0
-energyConsumed = 0
-nutrientsStored = 0
-nutrientsConsumed = 0
+
+def score(tree):
+    energyProduced = 0
+    energyConsumed = 0
+    nutrientsStored = 0
+    nutrientsConsumed = 0
+    for row in tree:
+        for pixel in row:
+            if pixel[0] == leaf[0] and pixel[1] == leaf[1] and pixel[2] == leaf[2]:
+                energyProduced = energyProduced + 2
+                nutrientsConsumed = nutrientsConsumed + 0.25
+            if pixel[0] == trunk[0] and pixel[1] == trunk[1] and pixel[2] == trunk[2]:
+                energyConsumed = energyConsumed + 0.25
+                nutrientsConsumed = nutrientsConsumed + 0.5
+            if pixel[0] == branch[0] and pixel[1] == branch[1] and pixel[2] == branch[2]:
+                nutrientsStored = nutrientsStored + 1.5
+                energyConsumed = energyConsumed + 0.1
+    #ORIGINAL
+    score = ((energyProduced - energyConsumed) ** 2) + ((nutrientsStored - nutrientsConsumed) ** 2)
+    #MODIFICATION
+    #score = ((energyProduced - energyConsumed)) + ((nutrientsStored - nutrientsConsumed))
+    return score
+
+
 
 def isSomething(p):
     if p[0] != 255:
@@ -97,7 +116,7 @@ def choose(w, t, b, l):
 def createRandomLifeform():
     tree = numpy.zeros((32, 16, 3), dtype=numpy.uint8)
     tree.fill(255)
-    p=[0.3, 0.6, 0.1, 0]
+    #p=[0.3, 0.6, 0.1, 0]
     t = numpy.random.randint(low=4, high=8)
     r = numpy.random.randint(low=0, high=16-t)
     for i in range(r, r+t):
@@ -134,32 +153,131 @@ def createRandomLifeform():
             if tree[x+1, y+1][0] == white[0]:
                 w+=1
             p = choose(w,t,b,l)
-            print(p)
+            #print(p)
             tree[x, y] = choosePixel(numpy.random.choice(possibilities, 1, 1, p))
-
-    
     return tree
 
-data = createRandomLifeform()
 
-#data[0, 0] = trunk
-#data[0, 1] = branch
-#data[0, 2] = leaf
 
-for row in data:
-    for pixel in row:
-        if pixel[0] == leaf[0] and pixel[1] == leaf[1] and pixel[2] == leaf[2]:
-            energyProduced = energyProduced + 2
-            nutrientsConsumed = nutrientsConsumed + 0.25
-        if pixel[0] == trunk[0] and pixel[1] == trunk[1] and pixel[2] == trunk[2]:
-            energyConsumed = energyConsumed + 0.25
-            nutrientsConsumed = nutrientsConsumed + 0.5
-        if pixel[0] == branch[0] and pixel[1] == branch[1] and pixel[2] == branch[2]:
-            nutrientsStored = nutrientsStored + 1.5
-            energyConsumed = energyConsumed + 0.1
+def generate_population(size):
+    population = []
+    for i in range(size):
+        individual = createRandomLifeform()
+        population.append(individual)
+    return population
 
-score = ((energyProduced - energyConsumed) ** 2) + ((nutrientsStored - nutrientsConsumed) ** 2)
-print(score)
 
-image = Image.fromarray(data)
+def sort_population_by_fitness(population):
+    #print("population")
+    #print(population)
+    score_population = []
+    order = []
+    for t in range(len(population)):
+        score_population.append(score(population[t]))
+        order.append([t, score(population[t])])
+    sorted_population = []
+    score_population.sort()
+    for s in score_population:
+        for o in order:
+            if s == o[1]:
+                i = o[0]
+                sorted_population.append(population[i])
+                break
+    return sorted_population
+
+
+def choice_by_roulette(population, fitness_sum):
+    sorted_population = sort_population_by_fitness(population)
+    offset = 0
+    normalized_fitness_sum = fitness_sum
+
+    lowest_fitness = score(sorted_population[0])
+    if lowest_fitness < 0:
+        offset = -lowest_fitness
+        normalized_fitness_sum += offset * len(sorted_population)
+
+    draw = random.uniform(0, 1)
+
+    accumulated = 0
+    for individual in sorted_population:
+        fitness = score(individual) + offset
+        probability = fitness / normalized_fitness_sum
+        accumulated += probability
+
+        if draw <= accumulated:
+            return individual
+
+def crossover(individual_a, individual_b):
+    tree = numpy.zeros((32, 16, 3), dtype=numpy.uint8)
+    tree.fill(255)
+    for x in range(0, 32):
+        for y in range(0, 8):
+            tree[x,y] = individual_a[x,y]
+    for x in range(0, 32):
+        for y in range(8, 16):
+            tree[x,y] = individual_b[x,y]
+    return tree
+
+
+def mutate(individual):
+    x = 0
+    y = 0
+    while isSomething(individual[x,y]) != True:
+        x = random.randint(0,31)
+        y = random.randint(0,15)
+
+    r = random.randint(0,3)
+    if r == 0:
+        individual[x,y] = trunk
+    elif r == 1:
+        individual[x,y] = branch
+    elif r == 2:
+        individual[x,y] = leaf
+
+    return individual
+
+def make_next_generation(previous_population):
+    next_generation = []
+    sorted_by_fitness_population = sort_population_by_fitness(previous_population)
+    population_size = len(previous_population)
+    fitness_sum = sum(score(individual) for individual in population)
+
+    for i in range(population_size):
+        first_choice = choice_by_roulette(sorted_by_fitness_population, fitness_sum)
+        second_choice = choice_by_roulette(sorted_by_fitness_population, fitness_sum)
+        """image = Image.fromarray(first_choice)
+        image.show()
+        image = Image.fromarray(second_choice)
+        image.show()"""
+        individual = crossover(first_choice, second_choice)
+        #image = Image.fromarray(individual)
+        #image.show()
+        individual = mutate(individual)
+        next_generation.append(individual)
+        
+
+    return next_generation
+
+
+size = 8
+generations = 10
+population = generate_population(size)
+optimal = population[0]
+
+i = 1
+while True:
+    print(f"🧬 GENERATION {i}")
+
+    for individual in population:
+        if score(individual) > score(optimal):
+            optimal = individual
+    if i == generations:
+        break
+    i += 1
+    # Make next generation...
+    population = make_next_generation(population)
+
+print("\n🔬 FINAL RESULT")
+print(score(optimal))
+image = Image.fromarray(optimal)
 image.show()
