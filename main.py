@@ -119,10 +119,11 @@ def createRandomLifeform():
     #p=[0.3, 0.6, 0.1, 0]
     t = numpy.random.randint(low=4, high=8)
     r = numpy.random.randint(low=0, high=16-t)
-    for i in range(r, r+t):
-        tree[31, i] = trunk 
+    for x in range(31,24, -1):
+        for i in range(r, r+t):
+            tree[x, i] = trunk 
 
-    for x in range(30, 1, -1):
+    for x in range(24, 1, -1):
         for y in range(1, 14):
             w = 0
             t = 0
@@ -157,7 +158,8 @@ def createRandomLifeform():
             tree[x, y] = choosePixel(numpy.random.choice(possibilities, 1, 1, p))
     return tree
 
-
+image = Image.fromarray(createRandomLifeform())
+image.show()
 
 def generate_population(size):
     population = []
