@@ -3,11 +3,16 @@ from PIL import Image
 from random import randint
 
 colors = [
-    (255, 255, 255, 255), #White
-    (103, 62, 20, 255), #Trunk
-    (133, 88, 35, 255), #Branches
-    (78, 105, 26, 255), #Leaves
+    [255, 255, 255], #White
+    [103, 62, 20], #Trunk
+    [133, 88, 35], #Branches
+    [78, 105, 26], #Leaves
 ]
+
+trunk = [0, 1]
+branch = [0, 1, 2]
+leaf = [0, 2, 3]
+leafOnLeaf = [0, 3]
 
 class Cell(object):
     color = (255, 255, 255, 255)
@@ -33,7 +38,7 @@ class Plant(object):
         energy = 0
         energyUsed = 0
 
-        for i in range(0, 32):
+        for i in range(31, -1, -1):
             for j in range(0, 16):
                 if dna[i, j][0].t == 1:
                     nutrients += 1.5
@@ -54,10 +59,10 @@ class Plant(object):
 
 
 def generateRandomPlant():
-    for i in range(0, 32):
+    for i in range(31, -1, -1):
         for j in range(0, 16):
-            if i > 8:
-                lifeFormDNA[i,j][0] = Cell(randint(0, 1))
+            if i > 23:
+                lifeFormDNA[i,j][0] = Cell(np.random.choice(trunk))
             else:
                 lifeFormDNA[i,j][0] = Cell(randint(0, 3))
 
@@ -67,16 +72,16 @@ def generateRandomPlant():
 
 def convertPlantToImage(plant):
     plantImage = np.zeros((32, 16, 3), dtype=np.uint8)
-    plantImage.fill(255)
 
     for i in range(0, 32):
         for j in range(0, 16):
-            plantImage[i, j][0] = plant[i, j][0].color
+            plantImage[i, j] = plant[i, j][0].color
 
     return plantImage
 
 plant = generateRandomPlant()
-print(convertPlantToImage(plant.dna))
+plantImage = convertPlantToImage(plant.dna)
 
-#image = Image.fromarray()
-#image.show()
+
+image = Image.fromarray(plantImage)
+image.show()
